@@ -3,6 +3,7 @@ package main
 
 import (
 	"github.com/johannesh/sup"
+	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"log"
 	"net"
@@ -11,7 +12,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"github.com/pkg/errors"
 )
 
 func main() {
