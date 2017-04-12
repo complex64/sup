@@ -25,7 +25,7 @@ type exit struct {
 	err error
 }
 
-func Supervise(pctx context.Context, flags Flags, children ... func(context.Context) error) error {
+func Supervise(pctx context.Context, flags Flags, children ...func(context.Context) error) error {
 	exits := make(chan *exit, 1)
 	defer close(exits)
 
@@ -66,7 +66,7 @@ restart:
 		case exit := <-exits:
 			ccount--
 			if exit.err == nil {
-				if (ccount == 0) {
+				if ccount == 0 {
 					return nil
 				}
 				continue
