@@ -1,6 +1,6 @@
 # sup
 
-Simple Supervisor Process Trees for Go with Contexts
+Simple Supervised Process Trees for Go with Contexts
 
 ## Example
 
