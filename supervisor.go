@@ -76,7 +76,8 @@ restart:
 			intvs := float64(since / flags.Duration)
 			failures = failures*math.Pow(0.5, intvs) + 1
 
-			if failures > float64(flags.Intensity) {
+			if int(failures) > flags.Intensity {
+				cancel()
 				flush(exits)
 				wg.Wait()
 				return exit.err
