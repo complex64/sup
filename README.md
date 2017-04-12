@@ -1,3 +1,7 @@
+# sup
+
+Simple Supervisor Process Trees for Go with Contexts
+
 ## Example
 
 In this example we start as supervisor from main. Wire things up for orderly shutdown.
