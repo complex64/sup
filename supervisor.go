@@ -20,13 +20,12 @@ const (
 	OneForAll
 )
 
-type Child func(context.Context) error
 type exit struct {
-	fun Child
+	fun func(context.Context) error
 	err error
 }
 
-func Supervise(pctx context.Context, flags Flags, children ... Child) error {
+func Supervise(pctx context.Context, flags Flags, children ... func(context.Context) error) error {
 	exits := make(chan *exit, 1)
 	defer close(exits)
 
@@ -109,7 +108,7 @@ func flush(exits chan *exit) {
 	}()
 }
 
-func exec(ctx context.Context, wg *sync.WaitGroup, exits chan *exit, childf Child) {
+func exec(ctx context.Context, wg *sync.WaitGroup, exits chan *exit, childf func(context.Context) error) {
 	errs := make(chan error, 1)
 	defer close(errs)
 	go func() { errs <- childf(ctx) }()
