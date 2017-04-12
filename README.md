@@ -36,7 +36,11 @@ func main() {
 }
 
 func runMainSupervisor(ctx context.Context) error {
-	return sup.Supervise(ctx, sup.Flags{},
+	return sup.Supervise(ctx,
+		sup.Flags{
+			Duration:  500 * time.Millisecond,
+			Intensity: 1,
+		},
 		runLeftChild,
 		runRightChild,
 	)
@@ -44,7 +48,7 @@ func runMainSupervisor(ctx context.Context) error {
 
 // Error once a second.
 func runLeftChild(ctx context.Context) error {
-	log.Println("left child says hi")
+	log.Println("left child started")
 	time.Sleep(time.Second)
 	return errors.New("left child error")
 }
