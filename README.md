@@ -2,6 +2,10 @@
 
 Simple Supervised Process Trees for Go with Contexts
 
+[![Build Status](https://travis-ci.org/johannesh/sup.svg?branch=master)](https://travis-ci.org/johannesh/sup)
+[![codecov](https://codecov.io/gh/johannesh/sup/branch/master/graph/badge.svg)](https://codecov.io/gh/johannesh/sup)
+
+
 ## Example
 
 In this example we start a supervisor from main and wire things up for orderly shutdown.
