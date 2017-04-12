@@ -1,3 +1,10 @@
+## Example
+
+In this example we start as supervisor from main. Wire things up for orderly shutdown.
+The supervisor has two children, left and right. Left keeps crashing once every second, while right continues to serve HTTP requests.
+
+Prelude with imports:
+
 ```go
 package main
 
@@ -13,7 +20,11 @@ import (
 	"syscall"
 	"time"
 )
+```
 
+Main handles SIGINT and SIGTERM and cancels the root context:
+
+```go
 func main() {
 	// Handle signals for orderly shutdown.
 	exit := make(chan os.Signal, 1)
@@ -34,7 +45,13 @@ func main() {
 		os.Exit(1)
 	}
 }
+```
 
+For more on contexts see [Go Concurrency Patterns: Context](https://blog.golang.org/context).
+
+Execute main supervisor via `runMainSupervisor`. The supervisor performs an orderly shutdown whenever the parent context is cancelled.
+
+```go
 func runMainSupervisor(ctx context.Context) error {
 	return sup.Supervise(ctx,
 		sup.Flags{
@@ -45,15 +62,21 @@ func runMainSupervisor(ctx context.Context) error {
 		runRightChild,
 	)
 }
+```
 
-// Error once a second.
+Keep crashing (i.e. return an error) once every second. The application continues to run since errors occur at half the maximum rate; Once per second vs. twice per second.
+
+```go
 func runLeftChild(ctx context.Context) error {
 	log.Println("left child started")
 	time.Sleep(time.Second)
 	return errors.New("left child error")
 }
+```
 
-// Example: Run a HTTP server, with orderly shutdown.
+The right child continues to server HTTP requests independent of the left child.
+
+```go
 func runRightChild(ctx context.Context) error {
 	lis, err := net.Listen("tcp", ":8899")
 	if err != nil {
@@ -80,3 +103,5 @@ func (_ *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("ok"))
 }
 ```
+
+If the left child we're to crash twice a second, the parent supervisor would shutdown as the maximum error threshold is reached. All children are shutdown in an orderly fashion.
