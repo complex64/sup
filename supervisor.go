@@ -98,6 +98,7 @@ restart:
 		}
 	}
 }
+
 func flush(exits chan *exit) {
 	go func() {
 		for {
