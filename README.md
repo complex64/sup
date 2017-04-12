@@ -4,8 +4,8 @@ Simple Supervised Process Trees for Go with Contexts
 
 ## Example
 
-In this example we start as supervisor from main. Wire things up for orderly shutdown.
-The supervisor has two children, left and right. Left keeps crashing once every second, while right continues to serve HTTP requests.
+In this example we start a supervisor from main and wire things up for orderly shutdown.
+The supervisor has two children, _left_ and _right_. Left keeps crashing once every second, while right continues to serve HTTP requests.
 
 Prelude with imports:
 
