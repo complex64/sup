@@ -7,7 +7,6 @@ Simple Supervised Process Trees for Go with Contexts
 [![codecov](https://codecov.io/gh/johannesh/sup/branch/master/graph/badge.svg)](https://codecov.io/gh/johannesh/sup)
 [![Go Report Card](https://goreportcard.com/badge/github.com/johannesh/sup)](https://goreportcard.com/report/github.com/johannesh/sup)
 
-
 ## Example
 
 In this example we start a supervisor from main and wire things up for orderly shutdown.
