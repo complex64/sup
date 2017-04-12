@@ -2,8 +2,10 @@
 
 Simple Supervised Process Trees for Go with Contexts
 
+[![GoDoc](https://godoc.org/github.com/johannesh/sup?status.svg)](https://godoc.org/github.com/johannesh/sup)
 [![Build Status](https://travis-ci.org/johannesh/sup.svg?branch=master)](https://travis-ci.org/johannesh/sup)
 [![codecov](https://codecov.io/gh/johannesh/sup/branch/master/graph/badge.svg)](https://codecov.io/gh/johannesh/sup)
+[![Go Report Card](https://goreportcard.com/badge/github.com/johannesh/sup)](https://goreportcard.com/report/github.com/johannesh/sup)
 
 
 ## Example
