@@ -74,7 +74,7 @@ func runLeftChild(ctx context.Context) error {
 }
 ```
 
-The right child continues to server HTTP requests independent of the left child.
+The right child continues to serve HTTP requests independent of the left child.
 
 ```go
 func runRightChild(ctx context.Context) error {
@@ -104,4 +104,4 @@ func (_ *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-If the left child we're to crash twice a second, the parent supervisor would shutdown as the maximum error threshold is reached. All children are shutdown in an orderly fashion.
+If the left child were to crash twice per second then the parent supervisor would shutdown as the maximum error threshold is reached.
