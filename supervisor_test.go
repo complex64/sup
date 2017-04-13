@@ -137,7 +137,9 @@ func Test_superviseTwoChildren_oneForAllRestart(t *testing.T) {
 	)
 
 	wg.Wait()
-	assert.Nil(t, err)
+	if err != nil {
+		assert.EqualError(t, err, "context canceled")
+	}
 }
 
 func Test_superviseTwoChildren_withCancelOfContext(t *testing.T) {
