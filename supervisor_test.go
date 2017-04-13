@@ -141,30 +141,24 @@ func Test_superviseTwoChildren_oneForAllRestart(t *testing.T) {
 }
 
 func Test_superviseTwoChildren_withCancelOfContext(t *testing.T) {
-	wg := &sync.WaitGroup{}
-	wg.Add(2)
-
 	ctx, cancel := context.WithCancel(context.Background())
 
-	done := make(chan struct{}, 1)
 	go func() {
-		err := Supervise(ctx, Flags{},
-			func(ctx context.Context) error {
-				defer wg.Done()
-				return nil
-			},
-			func(ctx context.Context) error {
-				defer wg.Done()
-				time.Sleep(5 * time.Millisecond)
-				return nil
-			},
-		)
-		assert.EqualError(t, err, "context canceled")
-		done <- struct{}{}
+		time.Sleep(5 * time.Millisecond)
+		cancel()
 	}()
-	cancel()
-	wg.Wait()
-	<-done
+
+	err := Supervise(ctx, Flags{},
+		func(ctx context.Context) error {
+			return nil
+		},
+		func(ctx context.Context) error {
+			time.Sleep(10 * time.Millisecond)
+			return nil
+		},
+	)
+
+	assert.EqualError(t, err, "context canceled")
 }
 
 func Test_superviseTwoChildren_withOneCrashingAboveThreshold(t *testing.T) {
