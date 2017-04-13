@@ -58,10 +58,10 @@ restart:
 		lastErrorAt := time.Now()
 
 		select {
-		case <-ctx.Done():
+		case <-pctx.Done():
 			flush(exits)
 			wg.Wait()
-			return ctx.Err()
+			return pctx.Err()
 
 		case exit := <-exits:
 			ccount--
