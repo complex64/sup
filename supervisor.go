@@ -67,6 +67,7 @@ restart:
 			ccount--
 			if exit.err == nil {
 				if ccount == 0 {
+					wg.Wait()
 					return nil
 				}
 				continue
