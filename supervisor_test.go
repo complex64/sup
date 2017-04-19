@@ -3,10 +3,10 @@ package sup
 import (
 	"errors"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 	"sync"
 	"testing"
 	"time"
+	"context"
 )
 
 func Test_execReturn(t *testing.T) {

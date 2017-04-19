@@ -1,10 +1,10 @@
 package sup
 
 import (
-	"golang.org/x/net/context"
 	"math"
 	"sync"
 	"time"
+	"context"
 )
 
 type Flags struct {
