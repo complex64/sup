@@ -29,10 +29,15 @@ const (
 	OneForAll
 )
 
+type Child struct {
+	Name     string
+	Function func(context.Context) error
+}
+
 // Passed on exit to supervisor process for every child that terminates.
 type exit struct {
-	fun func(context.Context) error
-	err error
+	child *Child
+	err   error
 }
 
 // Supervise creates a supervisor process as part of a supervision tree.
@@ -43,7 +48,7 @@ type exit struct {
 // Children are passed a context that is derived from the passed context
 //
 // All child processes are started asynchronously.
-func Supervise(name string, ctx context.Context, flags Flags, children ...func(context.Context) error) (err error) {
+func Supervise(name string, ctx context.Context, flags Flags, children ...Child) (err error) {
 	if name == "" {
 		name = "unnamed"
 	}
@@ -71,10 +76,10 @@ restart:
 	childrenWg := &sync.WaitGroup{}
 	childrenWg.Add(nChildren)
 
-	for _, childF := range children {
-		f := childF
-		log_(Info, "%s starting child %v...", name, f)
-		go runChild(name, childCtx, childrenWg, exits, f)
+	for _, child := range children {
+		c := child
+		log_(Info, "%s starting child '%s' [%v]...", name, c.Name, c.Function)
+		go runChild(name, childCtx, childrenWg, exits, &c)
 	}
 
 	for {
@@ -115,10 +120,10 @@ restart:
 
 			switch flags.Strategy {
 			case OneForOne:
-				log_(Info, "%s restarting single child %v...", name, exit.fun)
+				log_(Info, "%s restarting single child %s [%v]...", name, exit.child.Name, exit.child.Function)
 				childrenWg.Add(1) // Responsibility to decrement on exit is with runChild
 				nChildren++
-				go runChild(name, childCtx, childrenWg, exits, exit.fun)
+				go runChild(name, childCtx, childrenWg, exits, exit.child)
 				continue
 
 			case OneForAll:
@@ -142,23 +147,25 @@ func flush(exits chan *exit) {
 	}()
 }
 
-func runChild(parent string, ctx context.Context, childrenWg *sync.WaitGroup, exits chan *exit, childF func(context.Context) error) {
+func runChild(parent string, ctx context.Context, childrenWg *sync.WaitGroup, exits chan *exit, child *Child) {
 	var err error
-	defer func(e *error) { log_(Info, "%s child %v exited with '%v'.", parent, childF, *e) }(&err)
+	defer func(e *error) {
+		log_(Info, "%s child %v [%v] exited with '%v'.", parent, child.Name, child.Function, *e)
+	}(&err)
 
 	errs := make(chan error, 1)
 	defer close(errs)
 
-	go func() { errs <- childF(ctx) }()
+	go func() { errs <- child.Function(ctx) }()
 
 	// Pass exit status to supervisor, signal termination on the children wait group
 	select {
 	case <-ctx.Done():
 		err = <-errs // Child context cancelled as well, wait for termination
-		exits <- &exit{fun: childF, err: ctx.Err()}
+		exits <- &exit{child: child, err: ctx.Err()}
 		childrenWg.Done()
 	case err = <-errs:
-		exits <- &exit{fun: childF, err: err}
+		exits <- &exit{child: child, err: err}
 		childrenWg.Done()
 	}
 }
