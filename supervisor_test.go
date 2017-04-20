@@ -15,7 +15,7 @@ func Test_execReturn(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
-	exec(context.Background(), wg, exits, f)
+	runChild(context.Background(), wg, exits, f)
 
 	wg.Wait()
 	e := <-exits
@@ -35,7 +35,7 @@ func Test_execCancel(t *testing.T) {
 	wg.Add(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	go func() { exec(ctx, wg, exits, f) }()
+	go func() { runChild(ctx, wg, exits, f) }()
 
 	cancel()
 	continuef <- struct{}{}

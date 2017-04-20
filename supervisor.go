@@ -7,31 +7,44 @@ import (
 	"time"
 )
 
+// Flags configures supervisor's behavior in case a child processes terminates with an error.
+// It limits the number of restarts which can occur in a given time interval.
+// This is specified by the two elements Intensity and Duration.
+// If more than Intensity number of child processes terminate with an error within Duration, then the supervisor
+// terminates all children.
 type Flags struct {
-	Strategy  Strategy
-	Intensity int
-	Duration  time.Duration
+	Strategy  Strategy      // Default: OneForOne
+	Intensity int           // Default: 1
+	Duration  time.Duration // Default: 1*time.Second
 }
 
+// Strategy configures how children are restarted.
 type Strategy int
 
 const (
+	// OneForOne restarts only the child process that terminated.
 	OneForOne Strategy = iota
+	// OneForAll restarts all other child processes including the one that terminated.
+	// Child processes that previously finished are restarted as well.
 	OneForAll
 )
 
+// Passed on exit to supervisor process for every child that terminates.
 type exit struct {
 	fun func(context.Context) error
 	err error
 }
 
-func Supervise(pctx context.Context, flags Flags, children ...func(context.Context) error) error {
+// Supervise creates a supervisor process as part of a supervision tree.
+// The created supervisor process is configured with a restart strategy,
+// a maximum restart intensity, and a list of child processes.
+// Supervise returns only after all child processes terminated.
+// All child processes are started asynchronously.
+func Supervise(parentCtx context.Context, flags Flags, children ...func(context.Context) error) error {
+	// Channel to monitor child exits
 	exits := make(chan *exit, 1)
-	defer close(exits)
 
-	started := make(chan struct{}, 1)
-	defer close(started)
-
+	// Apply defaults
 	if flags.Duration == 0 {
 		flags.Duration = time.Second
 	}
@@ -39,61 +52,65 @@ func Supervise(pctx context.Context, flags Flags, children ...func(context.Conte
 		flags.Intensity = 1
 	}
 
-	failures := 0.0
+	failureRate := 0.0
 
 restart:
-	ctx, cancel := context.WithCancel(pctx)
+	childCtx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 
-	wg := &sync.WaitGroup{}
-	ccount := len(children)
-	wg.Add(ccount)
+	// Non-zero as long as children are still running
+	nChildren := len(children)
+	childrenWg := &sync.WaitGroup{}
+	childrenWg.Add(nChildren)
 
-	for _, f := range children {
-		childf := f
-		go exec(ctx, wg, exits, childf)
+	for _, childF := range children {
+		f := childF
+		go runChild(childCtx, childrenWg, exits, f)
 	}
 
 	for {
 		lastErrorAt := time.Now()
 
 		select {
-		case <-pctx.Done():
+		case <-parentCtx.Done(): // -> childCtx cancelled too
 			flush(exits)
-			wg.Wait()
-			return pctx.Err()
+			childrenWg.Wait()
+			return parentCtx.Err()
 
 		case exit := <-exits:
-			ccount--
+			nChildren--
+
 			if exit.err == nil {
-				if ccount == 0 {
-					wg.Wait()
+				if nChildren == 0 {
+					childrenWg.Wait() // Exit may be received before call to wait group from runChild
 					return nil
 				}
 				continue
 			}
 
+			// Decay and increment failure rate
 			since := time.Now().Sub(lastErrorAt)
 			intvs := float64(since / flags.Duration)
-			failures = failures*math.Pow(0.5, intvs) + 1
+			failureRate = failureRate*math.Pow(0.5, intvs) + 1
 
-			if int(failures) > flags.Intensity {
+			// Threshold reached: Terminate all children and return error that triggered threshold
+			if int(failureRate) > flags.Intensity {
 				cancel()
 				flush(exits)
-				wg.Wait()
+				childrenWg.Wait()
 				return exit.err
 			}
 
-			if flags.Strategy == OneForOne {
-				wg.Add(1)
-				ccount++
-				go exec(ctx, wg, exits, exit.fun)
+			switch flags.Strategy {
+			case OneForOne:
+				childrenWg.Add(1) // Responsibility to decrement on exit is with runChild
+				nChildren++
+				go runChild(childCtx, childrenWg, exits, exit.fun)
 				continue
-			}
 
-			if flags.Strategy == OneForAll {
+			case OneForAll:
 				cancel()
-				wg.Wait()
+				childrenWg.Wait()
 				goto restart
 			}
 		}
@@ -111,17 +128,19 @@ func flush(exits chan *exit) {
 	}()
 }
 
-func exec(ctx context.Context, wg *sync.WaitGroup, exits chan *exit, childf func(context.Context) error) {
+func runChild(ctx context.Context, childrenWg *sync.WaitGroup, exits chan *exit, childF func(context.Context) error) {
 	errs := make(chan error, 1)
 	defer close(errs)
-	go func() { errs <- childf(ctx) }()
+	go func() { errs <- childF(ctx) }()
+
+	// Pass exit status to supervisor, signal termination on the children wait group
 	select {
 	case <-ctx.Done():
-		<-errs
-		exits <- &exit{fun: childf, err: ctx.Err()}
-		wg.Done()
+		<-errs // Child context cancelled as well, wait for termination
+		exits <- &exit{fun: childF, err: ctx.Err()}
+		childrenWg.Done()
 	case err := <-errs:
-		exits <- &exit{fun: childf, err: err}
-		wg.Done()
+		exits <- &exit{fun: childF, err: err}
+		childrenWg.Done()
 	}
 }
