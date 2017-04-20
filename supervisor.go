@@ -124,7 +124,7 @@ restart:
 
 			switch flags.Strategy {
 			case OneForOne:
-				log_(Info, "%s restarting single child %s [%v]...", name, exit.child.name, exit.child.f)
+				log_(Info, "%s restarting single child '%s' [%v]...", name, exit.child.name, exit.child.f)
 				childrenWg.Add(1) // Responsibility to decrement on exit is with runChild
 				nChildren++
 				go runChild(name, childCtx, childrenWg, exits, exit.child)
@@ -154,7 +154,7 @@ func flush(exits chan *exit) {
 func runChild(parent string, ctx context.Context, childrenWg *sync.WaitGroup, exits chan *exit, child *Child) {
 	var err error
 	defer func(e *error) {
-		log_(Info, "%s child %v [%v] exited with '%v'.", parent, child.name, child.f, *e)
+		log_(Info, "%s child '%s' [%v] exited with '%v'.", parent, child.name, child.f, *e)
 	}(&err)
 
 	errs := make(chan error, 1)
