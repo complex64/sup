@@ -143,9 +143,6 @@ func flush(exits chan *exit) {
 }
 
 func runChild(parent string, ctx context.Context, childrenWg *sync.WaitGroup, exits chan *exit, childF func(context.Context) error) {
-	var err error
-	defer log_(Info, "%s child %v exited with '%v'.", parent, childF, err)
-
 	errs := make(chan error, 1)
 	defer close(errs)
 
@@ -155,11 +152,12 @@ func runChild(parent string, ctx context.Context, childrenWg *sync.WaitGroup, ex
 	select {
 	case <-ctx.Done():
 		log_(Debug, "%s child %v context cancelled.", parent, childF)
-		<-errs // Child context cancelled as well, wait for termination
-		err = ctx.Err()
-		exits <- &exit{fun: childF, err: err}
+		childErr := <-errs // Child context cancelled as well, wait for termination
+		log_(Info, "%s child %v exited (canceled) with '%v'.", parent, childF, childErr)
+		exits <- &exit{fun: childF, err: ctx.Err()}
 		childrenWg.Done()
-	case err = <-errs:
+	case err := <-errs:
+		log_(Info, "%s child %v exited with '%v'.", parent, childF, err)
 		exits <- &exit{fun: childF, err: err}
 		childrenWg.Done()
 	}
