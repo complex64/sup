@@ -62,7 +62,7 @@ Execute main supervisor via `runMainSupervisor`. The supervisor performs an orde
 
 ```go
 func runMainSupervisor(ctx context.Context) error {
-	return sup.Supervise(ctx,
+	return sup.Supervise("main", ctx,
 		sup.Flags{
 			Duration:  500 * time.Millisecond,
 			Intensity: 1,
