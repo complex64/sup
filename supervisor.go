@@ -38,9 +38,12 @@ type exit struct {
 // Supervise creates a supervisor process as part of a supervision tree.
 // The created supervisor process is configured with a restart strategy,
 // a maximum restart intensity, and a list of child processes.
-// Supervise returns only after all child processes terminated.
+//
+// Supervise returns only after all child processes terminated or once the passed context is canceled.
+// Children are passed a context that is derived from the passed context
+//
 // All child processes are started asynchronously.
-func Supervise(name string, parentCtx context.Context, flags Flags, children ...func(context.Context) error) (err error) {
+func Supervise(name string, ctx context.Context, flags Flags, children ...func(context.Context) error) (err error) {
 	if name == "" {
 		name = "unnamed supervisor"
 	}
@@ -60,7 +63,7 @@ func Supervise(name string, parentCtx context.Context, flags Flags, children ...
 	failureRate := 0.0
 
 restart:
-	childCtx, cancel := context.WithCancel(parentCtx)
+	childCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Non-zero as long as children are still running
@@ -78,11 +81,11 @@ restart:
 		lastErrorAt := time.Now()
 
 		select {
-		case <-parentCtx.Done(): // -> childCtx cancelled too
+		case <-ctx.Done(): // -> childCtx cancelled too
 			log(Debug, "%s parent context closed.", name)
 			flush(exits)
 			childrenWg.Wait()
-			err = parentCtx.Err()
+			err = ctx.Err()
 			return
 
 		case exit := <-exits:
