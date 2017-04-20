@@ -18,14 +18,14 @@ type Flags struct {
 	Duration  time.Duration // Default: 1*time.Second
 }
 
-// Strategy configures how children are restarted.
+// Strategy configures how children are restarted in case they terminate with an error
 type Strategy int
 
 const (
-	// OneForOne restarts only the child process that terminated.
+	// OneForOne restarts only the child process that terminated
 	OneForOne Strategy = iota
-	// OneForAll restarts all other child processes including the one that terminated.
-	// Child processes that previously finished are restarted as well.
+	// OneForAll restarts all other child processes including the one that terminated
+	// Child processes that previously finished are restarted as well
 	OneForAll
 )
 
