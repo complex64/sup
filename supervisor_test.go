@@ -50,12 +50,10 @@ func Test_superviseSingleReturn(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	err := Supervise("", context.Background(), Flags{},
-		Child{
-			f: func(ctx context.Context) error {
-				defer wg.Done()
-				return nil
-			},
-		},
+		NewChild("", func(ctx context.Context) error {
+			defer wg.Done()
+			return nil
+		}),
 	)
 	wg.Wait()
 	assert.Nil(t, err)
@@ -65,18 +63,14 @@ func Test_superviseDoubleReturn(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 	err := Supervise("", context.Background(), Flags{},
-		Child{
-			f: func(ctx context.Context) error {
-				defer wg.Done()
-				return nil
-			},
-		},
-		Child{
-			f: func(ctx context.Context) error {
-				defer wg.Done()
-				return nil
-			},
-		},
+		NewChild("", func(ctx context.Context) error {
+			defer wg.Done()
+			return nil
+		}),
+		NewChild("", func(ctx context.Context) error {
+			defer wg.Done()
+			return nil
+		}),
 	)
 	wg.Wait()
 	assert.Nil(t, err)
@@ -91,12 +85,10 @@ func Test_superviseSingleCrash_withRestart(t *testing.T) {
 	wg.Add(2)
 
 	err := Supervise("", context.Background(), Flags{},
-		Child{
-			f: func(ctx context.Context) error {
-				defer wg.Done()
-				return <-errs
-			},
-		},
+		NewChild("", func(ctx context.Context) error {
+			defer wg.Done()
+			return <-errs
+		}),
 	)
 	wg.Wait()
 	assert.Nil(t, err)
@@ -111,18 +103,14 @@ func Test_superviseTwoChildren_withSingleRestart(t *testing.T) {
 	wg.Add(3)
 
 	err := Supervise("", context.Background(), Flags{},
-		Child{
-			f: func(ctx context.Context) error {
-				defer wg.Done()
-				return <-errs
-			},
-		},
-		Child{
-			f: func(ctx context.Context) error {
-				defer wg.Done()
-				return nil
-			},
-		},
+		NewChild("", func(ctx context.Context) error {
+			defer wg.Done()
+			return <-errs
+		}),
+		NewChild("", func(ctx context.Context) error {
+			defer wg.Done()
+			return nil
+		}),
 	)
 	wg.Wait()
 	assert.Nil(t, err)
@@ -140,18 +128,14 @@ func Test_superviseTwoChildren_oneForAllRestart(t *testing.T) {
 		Flags{
 			Strategy: OneForAll,
 		},
-		Child{
-			f: func(ctx context.Context) error {
-				defer wg.Done()
-				return <-errs
-			},
-		},
-		Child{
-			f: func(ctx context.Context) error {
-				defer wg.Done()
-				return nil
-			},
-		},
+		NewChild("", func(ctx context.Context) error {
+			defer wg.Done()
+			return <-errs
+		}),
+		NewChild("", func(ctx context.Context) error {
+			defer wg.Done()
+			return nil
+		}),
 	)
 	wg.Wait()
 	if err != nil {
@@ -168,17 +152,13 @@ func Test_superviseTwoChildren_withCancelOfContext(t *testing.T) {
 	}()
 
 	err := Supervise("", ctx, Flags{},
-		Child{
-			f: func(ctx context.Context) error {
-				return nil
-			},
-		},
-		Child{
-			f: func(ctx context.Context) error {
-				time.Sleep(10 * time.Millisecond)
-				return nil
-			},
-		},
+		NewChild("", func(ctx context.Context) error {
+			return nil
+		}),
+		NewChild("", func(ctx context.Context) error {
+			time.Sleep(10 * time.Millisecond)
+			return nil
+		}),
 	)
 	assert.EqualError(t, err, "context canceled")
 }
@@ -208,18 +188,14 @@ func Test_superviseTwoChildren_withOneCrashingAboveThreshold(t *testing.T) {
 				Intensity: 2,
 				Duration:  10 * time.Millisecond,
 			},
-			Child{
-				f: func(ctx context.Context) error {
-					defer wg.Done()
-					return <-errs
-				},
-			},
-			Child{
-				f: func(ctx context.Context) error {
-					<-returnFromChild2
-					return nil
-				},
-			},
+			NewChild("", func(ctx context.Context) error {
+				defer wg.Done()
+				return <-errs
+			}),
+			NewChild("", func(ctx context.Context) error {
+				<-returnFromChild2
+				return nil
+			}),
 		)
 		assert.EqualError(t, err, "third")
 		done <- struct{}{}
