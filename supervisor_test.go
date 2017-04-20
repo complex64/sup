@@ -206,3 +206,14 @@ func Test_superviseTwoChildren_withOneCrashingAboveThreshold(t *testing.T) {
 
 	<-done
 }
+
+func Test_flush(t *testing.T) {
+	exits := make(chan *exit, 1)
+	done := make(chan struct{}, 1)
+	go func() {
+		flush(exits)
+		done <- struct{}{}
+	}()
+	close(exits)
+	<-done
+}

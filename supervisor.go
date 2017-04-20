@@ -92,7 +92,7 @@ restart:
 		select {
 		case <-ctx.Done(): // -> childCtx cancelled too
 			log_(Debug, "%s context closed.", name)
-			flush(exits)
+			go flush(exits)
 			childrenWg.Wait()
 			err = ctx.Err()
 			return
@@ -116,7 +116,7 @@ restart:
 			// Threshold reached: Terminate all children and return error that triggered threshold
 			if int(failureRate) > flags.Intensity {
 				cancel()
-				flush(exits)
+				go flush(exits)
 				childrenWg.Wait()
 				err = exit.err
 				return
@@ -141,14 +141,12 @@ restart:
 }
 
 func flush(exits chan *exit) {
-	go func() {
-		for {
-			_, ok := <-exits
-			if !ok {
-				return
-			}
+	for {
+		_, ok := <-exits
+		if !ok {
+			return
 		}
-	}()
+	}
 }
 
 func runChild(parent string, ctx context.Context, childrenWg *sync.WaitGroup, exits chan *exit, child *Child) {
