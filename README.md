@@ -12,25 +12,6 @@ Simple Supervised Process Trees for Go with Contexts
 In this example we start a supervisor from main and wire things up for orderly shutdown.
 The supervisor has two children, _left_ and _right_. Now _left_ keeps crashing once every second, while _right_ continues to serve HTTP requests.
 
-Prelude with imports:
-
-```go
-package main
-
-import (
-	"github.com/johannesh/sup"
-	"github.com/pkg/errors"
-	"golang.org/x/net/context"
-	"log"
-	"net"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-)
-```
-
 Main handles SIGINT and SIGTERM and cancels the root context:
 
 ```go
@@ -49,6 +30,7 @@ func main() {
 
 	log.Println("Starting...")
 
+    sup.SetLogger(sup.DefaultLogger)
 	err := runMainSupervisor(ctx)
 	if err != nil {
 		os.Exit(1)
@@ -67,8 +49,8 @@ func runMainSupervisor(ctx context.Context) error {
 			Duration:  500 * time.Millisecond,
 			Intensity: 1,
 		},
-		runLeftChild,
-		runRightChild,
+		sup.NewChild("left", runLeftChild),
+		sup.NewChild("right", runRightChild),
 	)
 }
 ```
@@ -83,7 +65,7 @@ func runLeftChild(ctx context.Context) error {
 }
 ```
 
-The right child continues to serve HTTP requests independent of the left child.
+The right child serves HTTP requests independent of the left child.
 
 ```go
 func runRightChild(ctx context.Context) error {
@@ -113,4 +95,4 @@ func (_ *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-If the left child were to crash twice per second then the parent supervisor would shutdown as the maximum error threshold is reached.
+If the left child were to crash twice per second then the parent supervisor shuts down as the maximum error threshold is reached.
