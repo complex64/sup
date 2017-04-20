@@ -30,8 +30,12 @@ const (
 )
 
 type Child struct {
-	Name     string
-	Function func(context.Context) error
+	name string
+	f    func(context.Context) error
+}
+
+func NewChild(name string, f func(context.Context) error) Child {
+	return Child{name: name, f: f}
 }
 
 // Passed on exit to supervisor process for every child that terminates.
@@ -78,7 +82,7 @@ restart:
 
 	for _, child := range children {
 		c := child
-		log_(Info, "%s starting child '%s' [%v]...", name, c.Name, c.Function)
+		log_(Info, "%s starting child '%s' [%v]...", name, c.name, c.f)
 		go runChild(name, childCtx, childrenWg, exits, &c)
 	}
 
@@ -120,7 +124,7 @@ restart:
 
 			switch flags.Strategy {
 			case OneForOne:
-				log_(Info, "%s restarting single child %s [%v]...", name, exit.child.Name, exit.child.Function)
+				log_(Info, "%s restarting single child %s [%v]...", name, exit.child.name, exit.child.f)
 				childrenWg.Add(1) // Responsibility to decrement on exit is with runChild
 				nChildren++
 				go runChild(name, childCtx, childrenWg, exits, exit.child)
@@ -150,13 +154,13 @@ func flush(exits chan *exit) {
 func runChild(parent string, ctx context.Context, childrenWg *sync.WaitGroup, exits chan *exit, child *Child) {
 	var err error
 	defer func(e *error) {
-		log_(Info, "%s child %v [%v] exited with '%v'.", parent, child.Name, child.Function, *e)
+		log_(Info, "%s child %v [%v] exited with '%v'.", parent, child.name, child.f, *e)
 	}(&err)
 
 	errs := make(chan error, 1)
 	defer close(errs)
 
-	go func() { errs <- child.Function(ctx) }()
+	go func() { errs <- child.f(ctx) }()
 
 	// Pass exit status to supervisor, signal termination on the children wait group
 	select {
