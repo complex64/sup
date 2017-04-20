@@ -25,11 +25,11 @@ func DefaultLogger(s Severity, format string, values ...interface{}) {
 	if s == Debug {
 		return
 	}
-	sstr := "ERROR"
+	severity := "ERROR"
 	if s == Info {
-		sstr = "info"
+		severity = "info"
 	}
-	f := fmt.Sprintf("[%s] (supervisor) %s", sstr, format)
+	f := fmt.Sprintf("[%s] (supervisor) %s", severity, format)
 	log.Printf(f, values...)
 }
 
