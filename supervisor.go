@@ -89,7 +89,6 @@ restart:
 			return
 
 		case exit := <-exits:
-			log_(Info, "%s child %v exited with '%v'.", name, exit.fun, exit.err)
 			nChildren--
 
 			if exit.err == nil {
@@ -144,8 +143,12 @@ func flush(exits chan *exit) {
 }
 
 func runChild(parent string, ctx context.Context, childrenWg *sync.WaitGroup, exits chan *exit, childF func(context.Context) error) {
+	var err error
+	defer log_(Info, "%s child %v exited with '%v'.", parent, childF, err)
+
 	errs := make(chan error, 1)
 	defer close(errs)
+
 	go func() { errs <- childF(ctx) }()
 
 	// Pass exit status to supervisor, signal termination on the children wait group
@@ -153,9 +156,10 @@ func runChild(parent string, ctx context.Context, childrenWg *sync.WaitGroup, ex
 	case <-ctx.Done():
 		log_(Debug, "%s child %v context cancelled.", parent, childF)
 		<-errs // Child context cancelled as well, wait for termination
-		exits <- &exit{fun: childF, err: ctx.Err()}
+		err = ctx.Err()
+		exits <- &exit{fun: childF, err: err}
 		childrenWg.Done()
-	case err := <-errs:
+	case err = <-errs:
 		exits <- &exit{fun: childF, err: err}
 		childrenWg.Done()
 	}
