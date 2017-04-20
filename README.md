@@ -30,7 +30,7 @@ func main() {
 
 	log.Println("Starting...")
 
-    sup.SetLogger(sup.DefaultLogger)
+	sup.SetLogger(sup.DefaultLogger)
 	err := runMainSupervisor(ctx)
 	if err != nil {
 		os.Exit(1)
