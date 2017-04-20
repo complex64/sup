@@ -49,7 +49,7 @@ func Test_execCancel(t *testing.T) {
 func Test_superviseSingleReturn(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
-	err := Supervise(context.Background(), Flags{}, func(ctx context.Context) error {
+	err := Supervise("", context.Background(), Flags{}, func(ctx context.Context) error {
 		defer wg.Done()
 		return nil
 	})
@@ -60,7 +60,7 @@ func Test_superviseSingleReturn(t *testing.T) {
 func Test_superviseDoubleReturn(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
-	err := Supervise(context.Background(), Flags{},
+	err := Supervise("", context.Background(), Flags{},
 		func(ctx context.Context) error {
 			defer wg.Done()
 			return nil
@@ -82,7 +82,7 @@ func Test_superviseSingleCrash_withRestart(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 
-	err := Supervise(context.Background(), Flags{}, func(ctx context.Context) error {
+	err := Supervise("", context.Background(), Flags{}, func(ctx context.Context) error {
 		defer wg.Done()
 		return <-errs
 	})
@@ -99,7 +99,7 @@ func Test_superviseTwoChildren_withSingleRestart(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(3)
 
-	err := Supervise(context.Background(), Flags{},
+	err := Supervise("", context.Background(), Flags{},
 		func(ctx context.Context) error {
 			defer wg.Done()
 			return <-errs
@@ -122,7 +122,7 @@ func Test_superviseTwoChildren_oneForAllRestart(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(4)
 
-	err := Supervise(context.Background(),
+	err := Supervise("", context.Background(),
 		Flags{
 			Strategy: OneForAll,
 		},
@@ -150,7 +150,7 @@ func Test_superviseTwoChildren_withCancelOfContext(t *testing.T) {
 		cancel()
 	}()
 
-	err := Supervise(ctx, Flags{},
+	err := Supervise("", ctx, Flags{},
 		func(ctx context.Context) error {
 			return nil
 		},
@@ -183,7 +183,7 @@ func Test_superviseTwoChildren_withOneCrashingAboveThreshold(t *testing.T) {
 
 	done := make(chan struct{}, 1)
 	go func() {
-		err := Supervise(context.Background(),
+		err := Supervise("", context.Background(),
 			Flags{
 				Intensity: 2,
 				Duration:  10 * time.Millisecond,

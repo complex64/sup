@@ -22,5 +22,5 @@ func log(s Severity, format string, values ...interface{}) {
 	if logger == nil {
 		return
 	}
-	logger(s, format, values)
+	logger(s, format, values...)
 }

@@ -40,7 +40,12 @@ type exit struct {
 // a maximum restart intensity, and a list of child processes.
 // Supervise returns only after all child processes terminated.
 // All child processes are started asynchronously.
-func Supervise(parentCtx context.Context, flags Flags, children ...func(context.Context) error) error {
+func Supervise(name string, parentCtx context.Context, flags Flags, children ...func(context.Context) error) (err error) {
+	if name == "" {
+		name = "unnamed supervisor"
+	}
+	defer log(Info, "%s exited with '%v'.", name, err)
+
 	// Channel to monitor child exits
 	exits := make(chan *exit, 1)
 
@@ -65,6 +70,7 @@ restart:
 
 	for _, childF := range children {
 		f := childF
+		log(Info, "%s starting child %v...", name, f)
 		go runChild(childCtx, childrenWg, exits, f)
 	}
 
@@ -73,17 +79,20 @@ restart:
 
 		select {
 		case <-parentCtx.Done(): // -> childCtx cancelled too
+			log(Debug, "%s parent context closed.", name)
 			flush(exits)
 			childrenWg.Wait()
-			return parentCtx.Err()
+			err = parentCtx.Err()
+			return
 
 		case exit := <-exits:
+			log(Info, "%s child %v exited with '%v'.", name, exit.fun, exit.err)
 			nChildren--
 
 			if exit.err == nil {
 				if nChildren == 0 {
 					childrenWg.Wait() // Exit may be received before call to wait group from runChild
-					return nil
+					return
 				}
 				continue
 			}
@@ -98,17 +107,20 @@ restart:
 				cancel()
 				flush(exits)
 				childrenWg.Wait()
-				return exit.err
+				err = exit.err
+				return
 			}
 
 			switch flags.Strategy {
 			case OneForOne:
+				log(Info, "%s restarting single child %v...", name, exit.fun)
 				childrenWg.Add(1) // Responsibility to decrement on exit is with runChild
 				nChildren++
 				go runChild(childCtx, childrenWg, exits, exit.fun)
 				continue
 
 			case OneForAll:
+				log(Info, "%s restarting all children...", name)
 				cancel()
 				childrenWg.Wait()
 				goto restart
