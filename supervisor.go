@@ -47,7 +47,7 @@ func Supervise(name string, ctx context.Context, flags Flags, children ...func(c
 	if name == "" {
 		name = "unnamed"
 	}
-	defer log_(Info, "%s exited with '%v'.", name, err)
+	defer func(e *error) { log_(Info, "%s exited with '%v'.", name, *e) }(&err)
 
 	// Channel to monitor child exits
 	exits := make(chan *exit, 1)
@@ -143,6 +143,9 @@ func flush(exits chan *exit) {
 }
 
 func runChild(parent string, ctx context.Context, childrenWg *sync.WaitGroup, exits chan *exit, childF func(context.Context) error) {
+	var err error
+	defer func(e *error) { log_(Info, "%s child %v exited with '%v'.", parent, childF, *e) }(&err)
+
 	errs := make(chan error, 1)
 	defer close(errs)
 
@@ -151,13 +154,10 @@ func runChild(parent string, ctx context.Context, childrenWg *sync.WaitGroup, ex
 	// Pass exit status to supervisor, signal termination on the children wait group
 	select {
 	case <-ctx.Done():
-		log_(Debug, "%s child %v context cancelled.", parent, childF)
-		childErr := <-errs // Child context cancelled as well, wait for termination
-		log_(Info, "%s child %v exited (canceled) with '%v'.", parent, childF, childErr)
+		err = <-errs // Child context cancelled as well, wait for termination
 		exits <- &exit{fun: childF, err: ctx.Err()}
 		childrenWg.Done()
-	case err := <-errs:
-		log_(Info, "%s child %v exited with '%v'.", parent, childF, err)
+	case err = <-errs:
 		exits <- &exit{fun: childF, err: err}
 		childrenWg.Done()
 	}
