@@ -1,5 +1,10 @@
 package sup
 
+import (
+	"fmt"
+	"log"
+)
+
 // Severity of the message to be logged
 type Severity int
 
@@ -14,13 +19,25 @@ type Logger func(s Severity, format string, values ...interface{})
 
 // SetLogger configures the logging function to use for all logging.
 // The default logger is nil and no logging is performed at all.
-func SetLogger(l Logger) { logger = l }
+func SetLogger(l Logger) { logFunction = l }
 
-var logger Logger
-
-func log(s Severity, format string, values ...interface{}) {
-	if logger == nil {
+func DefaultLogger(s Severity, format string, values ...interface{}) {
+	if s == Debug {
 		return
 	}
-	logger(s, format, values...)
+	sstr := "ERROR"
+	if s == Info {
+		sstr = "info"
+	}
+	f := fmt.Sprintf("[%s] (supervisor) %s", sstr, format)
+	log.Printf(f, values...)
+}
+
+var logFunction Logger
+
+func log_(s Severity, format string, values ...interface{}) {
+	if logFunction == nil {
+		return
+	}
+	logFunction(s, format, values...)
 }

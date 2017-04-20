@@ -47,7 +47,7 @@ func Supervise(name string, ctx context.Context, flags Flags, children ...func(c
 	if name == "" {
 		name = "unnamed supervisor"
 	}
-	defer log(Info, "%s exited with '%v'.", name, err)
+	defer log_(Info, "%s exited with '%v'.", name, err)
 
 	// Channel to monitor child exits
 	exits := make(chan *exit, 1)
@@ -73,7 +73,7 @@ restart:
 
 	for _, childF := range children {
 		f := childF
-		log(Info, "%s starting child %v...", name, f)
+		log_(Info, "%s starting child %v...", name, f)
 		go runChild(childCtx, childrenWg, exits, f)
 	}
 
@@ -82,14 +82,14 @@ restart:
 
 		select {
 		case <-ctx.Done(): // -> childCtx cancelled too
-			log(Debug, "%s parent context closed.", name)
+			log_(Debug, "%s parent context closed.", name)
 			flush(exits)
 			childrenWg.Wait()
 			err = ctx.Err()
 			return
 
 		case exit := <-exits:
-			log(Info, "%s child %v exited with '%v'.", name, exit.fun, exit.err)
+			log_(Info, "%s child %v exited with '%v'.", name, exit.fun, exit.err)
 			nChildren--
 
 			if exit.err == nil {
@@ -116,14 +116,14 @@ restart:
 
 			switch flags.Strategy {
 			case OneForOne:
-				log(Info, "%s restarting single child %v...", name, exit.fun)
+				log_(Info, "%s restarting single child %v...", name, exit.fun)
 				childrenWg.Add(1) // Responsibility to decrement on exit is with runChild
 				nChildren++
 				go runChild(childCtx, childrenWg, exits, exit.fun)
 				continue
 
 			case OneForAll:
-				log(Info, "%s restarting all children...", name)
+				log_(Info, "%s restarting all children...", name)
 				cancel()
 				childrenWg.Wait()
 				goto restart
